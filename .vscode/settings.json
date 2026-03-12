@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "limits.h": "c",
+        "input.h": "c",
+        "shell_prompt.h": "c",
+        "log.h": "c"
+    }
+}
