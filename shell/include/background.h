@@ -21,7 +21,7 @@ extern BackgroundJob bg_jobs[MAX_BG_JOBS];
 extern int bg_job_count;
 extern int next_job_number;
 
-void check_background_jobs();
-int activities_command();
+void check_background_jobs(void);
+int activities_command(void);
 int fg_builtin(int argc, char *argv[]);
-int bg_builtin(int argc, char *argv[]);  
+int bg_builtin(int argc, char *argv[]);

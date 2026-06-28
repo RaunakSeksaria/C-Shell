@@ -1,5 +1,3 @@
-// ############## LLM Generated Code Begins ##############
-
 #include "shell_prompt.h"
 #include "input.h"
 #include "command.h"
@@ -15,25 +13,8 @@
 #include <unistd.h>
 #include <limits.h>
 
-// prototypes for your handlers
 void sigint_handler(int sig);
 void sigtstp_handler(int sig);
-
-// Helper function to convert token types to strings for printing
-const char* token_type_to_string(TokenType type) {
-    switch (type) {
-        case TOKEN_NAME: return "NAME";
-        case TOKEN_PIPE: return "PIPE";
-        case TOKEN_AMPERSAND: return "AMPERSAND";
-        case TOKEN_SEMICOLON: return "SEMICOLON";
-        case TOKEN_INPUT_REDIR: return "INPUT_REDIR";
-        case TOKEN_OUTPUT_REDIR: return "OUTPUT_REDIR";
-        case TOKEN_APPEND_REDIR: return "APPEND_REDIR";
-        case TOKEN_END: return "END";
-        case TOKEN_INVALID: return "INVALID";
-        default: return "UNKNOWN";
-    }
-}
 
 void shell_loop(void) {
     char *input = NULL;
@@ -91,4 +72,3 @@ int main(){
     shell_loop();
     return 0;
 }
-// ############## LLM Generated Code Ends ################

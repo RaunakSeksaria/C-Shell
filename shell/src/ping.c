@@ -1,5 +1,3 @@
-// ############## LLM Generated Code Begins ##############
-
 #include <signal.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -39,4 +37,3 @@ int ping_command(int argc, char *argv[]) {
     printf("Sent signal %ld to process with pid %ld\n", sig_val, pid_val);
     return 0;
 }
-// ############## LLM Generated Code Ends ################

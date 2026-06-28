@@ -1,5 +1,3 @@
-// ############## LLM Generated Code Begins ##############
-
 #include "execute.h"
 #include "command.h"
 #include "token_utils.h"
@@ -292,4 +290,3 @@ int execute_command(Token *tokens, int token_count) {
     }
     return status;
 }
-// ############## LLM Generated Code Ends ################
