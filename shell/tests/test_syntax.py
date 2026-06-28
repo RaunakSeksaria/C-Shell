@@ -4,15 +4,16 @@ These tests verify the tokenizer/parser boundary — commands that should be
 rejected before execution (Invalid Syntax!) vs. commands that should reach
 the executor even if they fail to run.
 """
+
 import pytest
 
 INVALID = [
-    "| echo hi",          # pipe at start — atomic requires NAME first
-    "; echo hi",          # semicolon at start
-    "echo ; ;",           # consecutive separators
-    "echo | ; echo",      # pipe then semicolon (semicolon is not atomic)
-    "echo > > file",      # two consecutive output redirects with no filename between
-    "echo ;",             # trailing semicolon (only trailing & is valid)
+    "| echo hi",  # pipe at start — atomic requires NAME first
+    "; echo hi",  # semicolon at start
+    "echo ; ;",  # consecutive separators
+    "echo | ; echo",  # pipe then semicolon (semicolon is not atomic)
+    "echo > > file",  # two consecutive output redirects with no filename between
+    "echo ;",  # trailing semicolon (only trailing & is valid)
 ]
 
 VALID = [
@@ -20,7 +21,7 @@ VALID = [
     "echo a | cat",
     "echo a ; echo b",
     "echo hello > /dev/null",
-    "echo &",             # trailing & is valid (background)
+    "echo &",  # trailing & is valid (background)
     "cat < /dev/null",
     "echo a ; echo b &",  # trailing & on a sequence is valid
 ]

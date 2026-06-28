@@ -1,0 +1,7 @@
+# Ruff configuration for the shell test suite.
+line-length = 100
+
+[lint]
+# E/W: pycodestyle, F: pyflakes, I: import sorting,
+# B: bugbear (likely bugs), UP: pyupgrade (modern syntax).
+select = ["E", "W", "F", "I", "B", "UP"]

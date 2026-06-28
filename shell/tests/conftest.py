@@ -5,10 +5,12 @@ Each test gets a fresh shell process (via pexpect PTY) rooted at a
 pytest-provided tmp_path.  That directory becomes the shell's "home"
 (shell_home_dir), so the prompt shows ~ when you are there.
 """
+
 import re
-import pytest
-import pexpect
 from pathlib import Path
+
+import pexpect
+import pytest
 from psutil import Process
 
 SHELL_BIN = str(Path(__file__).parent.parent / "shell.out")
@@ -17,6 +19,11 @@ TIMEOUT = 5.0
 # Matches the shell prompt <user@host:path> — the \r\n exclusion prevents
 # matching commands that contain < and @ across multiple output lines.
 PROMPT_PAT = re.compile(r"<[^@>\r\n]+@[^:>\r\n]+:[^>\r\n]+> ")
+
+
+def nonempty_lines(text: str) -> list[str]:
+    """Split output into stripped, non-empty lines."""
+    return [line.strip() for line in text.split("\n") if line.strip()]
 
 
 class ShellFixture:
@@ -46,7 +53,7 @@ class ShellFixture:
         # Strip the PTY echo of the command itself
         echo = cmd + "\r\n"
         if out.startswith(echo):
-            out = out[len(echo):]
+            out = out[len(echo) :]
         return out.replace("\r\n", "\n").strip()
 
     def close(self):

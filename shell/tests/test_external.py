@@ -1,5 +1,7 @@
 """External command execution: fork/exec path."""
 
+import os
+
 
 def test_echo_single_arg(sh):
     assert sh.run("echo hello") == "hello"
@@ -20,5 +22,4 @@ def test_pwd_shows_launch_directory(sh, tmp_path):
 
 def test_env_var_expansion(sh):
     out = sh.run("echo $HOME")
-    import os
     assert out == os.environ.get("HOME", "")

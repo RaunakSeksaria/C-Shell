@@ -1,12 +1,16 @@
 """Background job execution: &, activities, completion messages."""
+
 import re
 import time
+
 import pytest
+
+from tests.conftest import nonempty_lines
 
 
 def test_background_prints_job_number_and_pid(sh):
     out = sh.run("sleep 1 &")
-    assert re.search(r'\[\d+\] \d+', out)
+    assert re.search(r"\[\d+\] \d+", out)
 
 
 def test_background_returns_prompt_without_waiting(sh):
@@ -44,6 +48,6 @@ def test_activities_sorted_lexicographically(sh):
     sh.run("sleep 30 &")
     sh.run("cat /dev/zero &")
     out = sh.run("activities")
-    lines = [l.strip() for l in out.split("\n") if l.strip()]
-    names = [re.search(r'- (\S+)', l).group(1) for l in lines if re.search(r'- (\S+)', l)]
+    lines = nonempty_lines(out)
+    names = [m.group(1) for line in lines if (m := re.search(r"- (\S+)", line))]
     assert names == sorted(names)

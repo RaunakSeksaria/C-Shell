@@ -1,5 +1,4 @@
 """hop builtin: cd equivalent with ~, .., -, and multi-arg support."""
-import pytest
 
 
 def test_hop_no_args_returns_to_home(sh, tmp_path):
