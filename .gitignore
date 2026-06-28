@@ -11,11 +11,8 @@ Xv6_notes_on_scheduling_and_trap_handling.pdf
 __pycache__/
 .venv/
 tester.tar.gz
-test.py
-requirements.txt
 shell.tcl
 test_files
 mini-project1.md
 *.txt
-tests/
 grade/

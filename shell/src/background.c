@@ -64,8 +64,7 @@ int activities_command(void) {
         list[n].pid = bg_jobs[i].pid;
 
         if (result == 0) {
-            strcpy(list[n].state, "Running");
-            strcpy(bg_jobs[i].state, "Running");
+            strcpy(list[n].state, bg_jobs[i].state);
         } else if (result > 0) {
             if (WIFSTOPPED(status)) {
                 strcpy(list[n].state, "Stopped");
