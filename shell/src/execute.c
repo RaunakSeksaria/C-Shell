@@ -22,20 +22,17 @@ pid_t fg_pid = -1;
 char fg_command[1024] = "";
 char fg_full_command[1024] = "";
 
-// Update execute_external_command to handle background jobs
 static int execute_external_command(char **args, Token *tokens, int token_count, int is_background) {
     pid_t pid = fork();
 
     if (pid == -1) {
-        // Fork failed
         perror("fork");
         return -1;
     }
 
     if (pid == 0) {
-        // Child process
-
-        // Redirect stdin to /dev/null for background jobs
+        // Background jobs read from /dev/null so they can never steal keystrokes
+        // from the terminal the interactive shell is still reading.
         if (is_background) {
             int devnull = open("/dev/null", O_RDONLY);
             if (devnull != -1) {
@@ -44,77 +41,70 @@ static int execute_external_command(char **args, Token *tokens, int token_count,
             }
         }
 
-        // Set up input redirection
         if (setup_input_redirection(tokens, token_count) == -1) {
             exit(1);
         }
-
-        // Set up output redirection
         if (setup_output_redirection(tokens, token_count) == -1) {
             exit(1);
         }
 
         execvp(args[0], args);
-        // If execvp returns, it means it failed
+        // execvp only returns on failure, so reaching here means the lookup failed.
         fprintf(stderr, "Command not found!\n");
         exit(1);
     } else {
-        // Parent process
         if (is_background) {
-            // Add job to background job list
             if (bg_job_count < MAX_BG_JOBS) {
                 bg_jobs[bg_job_count].job_number = next_job_number;
                 bg_jobs[bg_job_count].pid = pid;
                 strncpy(bg_jobs[bg_job_count].command_name, args[0], 255);
                 bg_jobs[bg_job_count].command_name[255] = '\0';
-                
-                // Store full command
+
                 char *full_cmd = reconstruct_command(tokens, token_count);
                 strncpy(bg_jobs[bg_job_count].full_command, full_cmd, 1023);
                 bg_jobs[bg_job_count].full_command[1023] = '\0';
                 free(full_cmd);
-                
-                // Set initial state as running
+
                 strcpy(bg_jobs[bg_job_count].state, "Running");
-                
                 bg_job_count++;
             }
             printf("[%d] %d\n", next_job_number, pid);
             next_job_number++;
-            // Do not wait for child, return immediately
             return 0;
         } else {
+            // Publish the foreground child so the SIGINT/SIGTSTP handlers can
+            // forward terminal signals to it (see signalling.c).
             fg_pid = pid;
             strncpy(fg_command, args[0], sizeof(fg_command)-1);
             fg_command[sizeof(fg_command)-1] = '\0';
-            
-            // Store full command for fg process
+
             char *full_cmd = reconstruct_command(tokens, token_count);
             strncpy(fg_full_command, full_cmd, sizeof(fg_full_command)-1);
             fg_full_command[sizeof(fg_full_command)-1] = '\0';
             free(full_cmd);
-            
+
             int status;
-            waitpid(pid, &status, WUNTRACED);  // allow detecting stop signals
-            fg_pid = -1;  // reset after process finishes/stops
+            waitpid(pid, &status, WUNTRACED);  // WUNTRACED: return on Ctrl-Z stop, not only on exit
+            fg_pid = -1;
             return WEXITSTATUS(status);
         }
     }
 }
 
-
-
+// Dispatches one parsed line. A trailing '&' is peeled off first, then the
+// separators are handled in precedence order: ';' sequences recurse back into
+// this function, '|' pipelines fork a child per stage, and a bare command runs
+// directly. Builtins are matched before exec so commands like hop and log can
+// mutate the shell's own state (cwd, history) instead of a throwaway child's.
 int execute_command(Token *tokens, int token_count) {
     if (token_count == 0) return 0;
 
-    // Check for background execution
     int is_background = 0;
     if (token_count > 0 && tokens[token_count - 1].type == TOKEN_AMPERSAND) {
         is_background = 1;
-        token_count--; // Remove '&' from tokens
+        token_count--;
     }
 
-    // Check for sequential execution
     int seq_count = 0;
     for (int i = 0; i < token_count; i++) {
         if (tokens[i].type == TOKEN_SEMICOLON) seq_count++;
@@ -124,13 +114,12 @@ int execute_command(Token *tokens, int token_count) {
         int nseqs = split_sequences(tokens, token_count, seq_starts, seq_lens, MAX_SEQS);
         int last_status = 0;
         for (int i = 0; i < nseqs; i++) {
+            // A failing segment never aborts the rest: `a ; b` always runs b.
             last_status = execute_command(&tokens[seq_starts[i]], seq_lens[i]);
-            // Continue even if a command fails
         }
         return last_status;
     }
 
-    // Detect if there are pipes
     int pipe_count = 0;
     for (int i = 0; i < token_count; i++) {
         if (tokens[i].type == TOKEN_PIPE) pipe_count++;
@@ -139,29 +128,28 @@ int execute_command(Token *tokens, int token_count) {
         char *args[MAX_ARGS];
         int arg_count = 0;
 
-        // Convert tokens to arguments, skipping redirection operators and their filenames
+        // Build argv from NAME tokens, copying each out of the input buffer and
+        // expanding $VARs. Redirection targets are skipped here; redirection.c
+        // consumes them separately straight from the token stream.
         for (int i = 0; i < token_count && arg_count < MAX_ARGS - 1; i++) {
             if (tokens[i].type == TOKEN_NAME) {
-                // Skip if this is a filename following a redirection operator
                 if (i > 0 && (tokens[i-1].type == TOKEN_INPUT_REDIR ||
                              tokens[i-1].type == TOKEN_OUTPUT_REDIR ||
                              tokens[i-1].type == TOKEN_APPEND_REDIR)) {
                     continue;
                 }
-                
+
                 char* temp = malloc(tokens[i].len + 1);
                 strncpy(temp, tokens[i].text, tokens[i].len);
                 temp[tokens[i].len] = '\0';
-                
-                // Expand environment variables
+
                 args[arg_count] = expand_env_vars(temp);
                 free(temp);
                 arg_count++;
             }
         }
-        args[arg_count] = NULL;  // NULL terminate the argument list
+        args[arg_count] = NULL;
 
-        // Check for built-in commands first
         int result = -1;
         if (arg_count > 0) {
             if (strcmp(args[0], "hop") == 0) {
@@ -176,8 +164,8 @@ int execute_command(Token *tokens, int token_count) {
             else if (strcmp(args[0], "activities") == 0) {
                 result = activities_command();
             }
-            else if(strcmp(args[0], "ping") == 0){
-                result = ping_command(arg_count,args);
+            else if (strcmp(args[0], "ping") == 0) {
+                result = ping_command(arg_count, args);
             }
             else if (strcmp(args[0], "fg") == 0) {
                 result = fg_builtin(arg_count, args);
@@ -186,11 +174,11 @@ int execute_command(Token *tokens, int token_count) {
                 result = bg_builtin(arg_count, args);
             }
             else {
-                // Not a built-in command, try to execute it as an external command
-                result = execute_external_command(args, tokens, token_count,is_background);
+                result = execute_external_command(args, tokens, token_count, is_background);
             }
-            
-            // Store command in log if it's not a log command
+
+            // log owns its own history (e.g. `log execute`), so every command
+            // is recorded except log itself, and only when it actually ran.
             if (strcmp(args[0], "log") != 0 && result != -1) {
                 char *command = reconstruct_command(tokens, token_count);
                 store_command(command);
@@ -198,7 +186,6 @@ int execute_command(Token *tokens, int token_count) {
             }
         }
 
-        // Free allocated memory
         for (int i = 0; i < arg_count; i++) {
             free(args[i]);
         }
@@ -206,7 +193,6 @@ int execute_command(Token *tokens, int token_count) {
         return result;
     }
 
-    // Handle piped commands
     int cmd_starts[MAX_CMDS], cmd_lens[MAX_CMDS];
     int cmd_count = split_commands(tokens, token_count, cmd_starts, cmd_lens, MAX_CMDS);
 
@@ -219,33 +205,29 @@ int execute_command(Token *tokens, int token_count) {
     for (int i = 0; i < cmd_count; i++) {
         pid_t pid = fork();
         if (pid == 0) {
-            // Child process
-
-            // Input redirection for first command
+            // Only the ends touch files: the first stage may read a file, the
+            // last may redirect out; interior stages are wired pipe-to-pipe.
             if (i == 0) {
                 setup_input_redirection(&tokens[cmd_starts[i]], cmd_lens[i]);
             }
-            // Output redirection for last command
             if (i == cmd_count - 1) {
                 setup_output_redirection(&tokens[cmd_starts[i]], cmd_lens[i]);
             }
 
-            // If not first, set stdin to previous pipe
             if (i > 0) {
                 dup2(pipes[i-1][0], STDIN_FILENO);
             }
-            // If not last, set stdout to next pipe
             if (i < cmd_count - 1) {
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
 
-            // Close all pipe fds in child
+            // After dup2 every child closes all pipe fds: a single write end
+            // left open anywhere prevents a downstream reader from seeing EOF.
             for (int j = 0; j < cmd_count - 1; j++) {
                 close(pipes[j][0]);
                 close(pipes[j][1]);
             }
 
-            // Build args for this command
             char *args[MAX_ARGS];
             int arg_count = 0;
             for (int k = 0; k < cmd_lens[i] && arg_count < MAX_ARGS - 1; k++) {
@@ -266,7 +248,6 @@ int execute_command(Token *tokens, int token_count) {
             }
             args[arg_count] = NULL;
 
-            // Execute command
             execvp(args[0], args);
             fprintf(stderr, "Command not found!\n");
             exit(1);
@@ -274,17 +255,18 @@ int execute_command(Token *tokens, int token_count) {
         pids[i] = pid;
     }
 
-    // Parent closes all pipe fds
+    // The parent owns no pipe end it needs; closing them all is what lets each
+    // stage see EOF once its upstream writer exits.
     for (int i = 0; i < cmd_count - 1; i++) {
         close(pipes[i][0]);
         close(pipes[i][1]);
     }
 
-    // Wait for all children
     int status = 0;
     for (int i = 0; i < cmd_count; i++) {
         int s;
-        if(!is_background) waitpid(pids[i], &s, 0);
+        if (!is_background) waitpid(pids[i], &s, 0);
+        // Pipeline status is that of its last stage, matching POSIX shells.
         if (i == cmd_count - 1) status = WEXITSTATUS(s);
     }
     return status;

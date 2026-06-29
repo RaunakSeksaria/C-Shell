@@ -4,6 +4,11 @@
 #include <string.h>
 #include <stdio.h>
 
+// The shell catches SIGINT/SIGTSTP and forwards them to the foreground job
+// instead of acting on them itself, so Ctrl-C / Ctrl-Z hit the running command
+// while the shell survives. The negative pid targets the job's whole process
+// group, reaching any children it spawned; with no foreground job the signal
+// is simply swallowed.
 void sigint_handler(int sig) {
     (void)sig;
     if (fg_pid > 0) {
@@ -15,6 +20,8 @@ void sigtstp_handler(int sig) {
     (void)sig;
     if (fg_pid > 0) {
         kill(-fg_pid, SIGTSTP);
+        // Park the stopped job in the background table so it appears in
+        // `activities` and can be resumed later with fg/bg.
         if (bg_job_count < MAX_BG_JOBS) {
             bg_jobs[bg_job_count].job_number = next_job_number++;
             bg_jobs[bg_job_count].pid = fg_pid;

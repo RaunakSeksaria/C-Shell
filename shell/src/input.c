@@ -11,6 +11,11 @@ static int is_shell_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c=='\f' || c=='\v';
 }
 
+// Lexes input into a Token array. Tokens are zero-copy: each Token.text points
+// into the caller's input buffer instead of owning a copy, so the returned
+// array is valid only while that buffer lives. An operator glued to its operand
+// (e.g. ">out.txt") is split into two tokens, letting the parser and executor
+// treat operands uniformly whether or not a space separates them.
 Token* tokenize(const char *input, int *token_count) {
     int capacity = 16;
     Token *tokens = malloc(sizeof(Token) * capacity);
@@ -114,6 +119,14 @@ Token* tokenize(const char *input, int *token_count) {
     return tokens;
 }
 
+// Recursive-descent syntax validator for one input line. Shape:
+//   line   := group ( sep group )*   with an optional trailing '&'
+//   group  := atomic ( '|' atomic )*
+//   atomic := NAME ( NAME | ('<' | '>' | '>>') NAME )*
+//   sep    := ';' | '&'
+// A trailing '&' is allowed (it backgrounds the last group); a trailing ';' and
+// empty groups between two separators are errors. This only checks shape —
+// execute.c re-walks the same tokens to actually run them.
 static int parse_shell_cmd(Token **current);
 static int parse_cmd_group(Token **current);
 static int parse_atomic(Token **current);

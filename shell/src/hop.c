@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <sys/types.h>
 
+// Changes directory and, on success, records the directory we left so a later
+// `hop -` can return to it.
 static int change_directory(const char *path) {
     char current[PATH_MAX];
 

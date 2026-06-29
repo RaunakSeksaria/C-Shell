@@ -26,20 +26,21 @@ void shell_loop(void) {
         ssize_t characters = take_input(&input, &bufsize);
 
         if (characters == -1) {
-            // Ctrl-D pressed, EOF received
-            // kill all background jobs
+            // Ctrl-D (EOF): tear down background jobs so none are left orphaned,
+            // then exit the way a login shell does.
             for (int i = 0; i < bg_job_count; i++) {
                 kill(bg_jobs[i].pid, SIGKILL);
             }
 
             printf("logout\n");
-            exit(0);  // clean exit
+            exit(0);
         }
 
         if (characters > 0 && input[characters - 1] == '\n') {
             input[characters - 1] = '\0';
         }
-        // check for completed background jobs before parsing this input
+        // Reap and report finished jobs before the next prompt, so completion
+        // notices interleave with the prompt the way an interactive shell expects.
         check_background_jobs();
         int token_count;
         Token *tokens = tokenize(input, &token_count);
@@ -57,11 +58,11 @@ void shell_loop(void) {
 }
 
 int main(){
-    // install the handlers
     signal(SIGINT, sigint_handler);   // Ctrl-C
     signal(SIGTSTP, sigtstp_handler); // Ctrl-Z
 
-    // Initialize shell home directory to current working directory
+    // The launch directory becomes the shell's "home": '~' in the prompt and
+    // `hop` with no argument resolve to it, independent of $HOME.
     char *cwd = getcwd(NULL, 0);
     if (cwd) {
         strncpy(shell_home_dir, cwd, PATH_MAX - 1);

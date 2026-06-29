@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+// Rebuilds a command string from its tokens, joined by single spaces. Since
+// tokens are whitespace-stripped, this yields a normalized form of the input
+// (collapsed spacing) — that normalized text is what history stores and what
+// background-job listings display, not the raw keystrokes.
 char* reconstruct_command(Token *tokens, int token_count) {
     char *command = malloc(4096);
     int pos = 0;
@@ -16,6 +20,8 @@ char* reconstruct_command(Token *tokens, int token_count) {
     return command;
 }
 
+// Expands $VAR references against the process environment; an unset variable
+// expands to the empty string.
 char* expand_env_vars(const char* arg) {
     char* result = malloc(4096);
     int pos = 0;

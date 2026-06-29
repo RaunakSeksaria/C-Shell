@@ -6,6 +6,9 @@
 #include <string.h>
 #include "shell_state.h"
 
+// Renders the prompt as <user@host:cwd>, collapsing the shell's home-directory
+// prefix to '~' (so a path under home reads ~/sub). Anywhere outside home the
+// absolute path is shown.
 void print_start_prompt(void) {
     char username[LOGIN_NAME_MAX];
     if (getlogin_r(username, sizeof(username)) != 0) {

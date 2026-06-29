@@ -68,6 +68,9 @@ int reveal_command(int argc, char *argv[]) {
         return -1;
     }
 
+    // Flags may appear anywhere and any number of times (their letters merge,
+    // so `-a -l` == `-al`); reveal then accepts at most one path operand — the
+    // lone non-flag token following the flags.
     int last_flag_index = 0;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {

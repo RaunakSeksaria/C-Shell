@@ -23,6 +23,8 @@ int ping_command(int argc, char *argv[]) {
         return -1;
     }
 
+    // Wrap the requested number into the valid signal range [0, 31] so any
+    // input maps to a real signal rather than being rejected.
     int actual_signal = sig_val % 32;
 
     if (kill((pid_t)pid_val, actual_signal) == -1) {

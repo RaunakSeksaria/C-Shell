@@ -13,6 +13,8 @@
 #define MAX_COMMAND_LENGTH 1024
 #define LOG_FILE ".shell_history"
 
+// Set only while `log execute` runs a replayed command, so that command (and
+// the `log execute` invocation itself) is not appended back into the history.
 static int g_suppress_log = 0;
 
 static char *get_log_file_path(void) {
@@ -76,12 +78,16 @@ void store_command(const char *command) {
     int count;
     char **commands = read_log_file(&count);
 
+    // Collapse consecutive repeats: re-running the same command does not grow
+    // the history.
     if (count > 0 && strcmp(commands[count-1], command) == 0) {
         for (int i = 0; i < count; i++) free(commands[i]);
         free(commands);
         return;
     }
 
+    // Fixed-size ring of the MAX_COMMANDS most recent entries: once full, drop
+    // the oldest to make room.
     if (count == MAX_COMMANDS) {
         free(commands[0]);
         for (int i = 0; i < count - 1; i++) commands[i] = commands[i + 1];
@@ -126,6 +132,8 @@ int log_command(int argc, char *argv[]) {
             return -1;
         }
 
+        // Index 1 is the most recent command; the file stores oldest-first, so
+        // invert into an array position.
         index = count - index;
         char *cmd_to_execute = strdup(commands[index]);
 

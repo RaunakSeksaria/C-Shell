@@ -12,6 +12,9 @@ BackgroundJob bg_jobs[MAX_BG_JOBS];
 int bg_job_count = 0;
 int next_job_number = 1;
 
+// Reaps finished background jobs without blocking (WNOHANG); run once before
+// every prompt. When a job is removed we shift the tail down and deliberately
+// do not advance i, so the entry that slides into slot i is still examined.
 void check_background_jobs(void) {
     for (int i = 0; i < bg_job_count; ) {
         int status;
@@ -64,6 +67,9 @@ int activities_command(void) {
         list[n].pid = bg_jobs[i].pid;
 
         if (result == 0) {
+            // Nothing waiting in the queue. A Ctrl-Z stop was already consumed
+            // by the foreground waitpid (execute.c / fg_builtin), so the last
+            // state we recorded is the authoritative one.
             strcpy(list[n].state, bg_jobs[i].state);
         } else if (result > 0) {
             if (WIFSTOPPED(status)) {
