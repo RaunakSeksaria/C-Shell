@@ -97,7 +97,7 @@ int fg_builtin(int argc, char *argv[]) {
 
     if (argc == 1) {
         if (bg_job_count == 0) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
         int max_job_num = -1;
@@ -110,7 +110,7 @@ int fg_builtin(int argc, char *argv[]) {
     } else if (argc == 2) {
         int job_num = atoi(argv[1]);
         if (job_num <= 0) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
         for (int i = 0; i < bg_job_count; i++) {
@@ -120,11 +120,11 @@ int fg_builtin(int argc, char *argv[]) {
             }
         }
         if (target_job == -1) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
     } else {
-        printf("fg: Invalid Syntax!\n");
+        fprintf(stderr, "fg: Invalid Syntax!\n");
         return -1;
     }
 
@@ -155,7 +155,7 @@ int bg_builtin(int argc, char *argv[]) {
 
     if (argc == 1) {
         if (bg_job_count == 0) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
         int max_job_num = -1;
@@ -168,7 +168,7 @@ int bg_builtin(int argc, char *argv[]) {
     } else if (argc == 2) {
         int job_num = atoi(argv[1]);
         if (job_num <= 0) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
         for (int i = 0; i < bg_job_count; i++) {
@@ -178,16 +178,16 @@ int bg_builtin(int argc, char *argv[]) {
             }
         }
         if (target_job == -1) {
-            printf("No such job\n");
+            fprintf(stderr, "No such job\n");
             return -1;
         }
     } else {
-        printf("bg: Invalid Syntax!\n");
+        fprintf(stderr, "bg: Invalid Syntax!\n");
         return -1;
     }
 
     if (strcmp(bg_jobs[target_job].state, "Running") == 0) {
-        printf("Job already running\n");
+        fprintf(stderr, "Job already running\n");
         return -1;
     }
 

@@ -45,7 +45,7 @@ void shell_loop(void) {
         Token *tokens = tokenize(input, &token_count);
 
         if (!parse_input(tokens, token_count)) {
-            printf("Invalid Syntax!\n");
+            fprintf(stderr, "Invalid Syntax!\n");
         } else {
             execute_command(tokens, token_count);
         }

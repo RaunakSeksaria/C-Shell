@@ -14,9 +14,13 @@
 #include <fcntl.h>
 #include "ping.h"
 
-pid_t fg_pid = -1;          // actual definition
-char fg_command[1024] = ""; // actual definition
-char fg_full_command[1024] = ""; // actual definition
+#define MAX_SEQS 64   // max ';'-separated commands in one line
+#define MAX_CMDS 32   // max '|'-separated stages in one pipeline
+#define MAX_ARGS 256  // max arguments (incl. command name) per command
+
+pid_t fg_pid = -1;
+char fg_command[1024] = "";
+char fg_full_command[1024] = "";
 
 // Update execute_external_command to handle background jobs
 static int execute_external_command(char **args, Token *tokens, int token_count, int is_background) {
@@ -52,7 +56,7 @@ static int execute_external_command(char **args, Token *tokens, int token_count,
 
         execvp(args[0], args);
         // If execvp returns, it means it failed
-        printf("Command not found!\n");
+        fprintf(stderr, "Command not found!\n");
         exit(1);
     } else {
         // Parent process
@@ -116,7 +120,6 @@ int execute_command(Token *tokens, int token_count) {
         if (tokens[i].type == TOKEN_SEMICOLON) seq_count++;
     }
     if (seq_count > 0) {
-        #define MAX_SEQS 64
         int seq_starts[MAX_SEQS], seq_lens[MAX_SEQS];
         int nseqs = split_sequences(tokens, token_count, seq_starts, seq_lens, MAX_SEQS);
         int last_status = 0;
@@ -133,9 +136,6 @@ int execute_command(Token *tokens, int token_count) {
         if (tokens[i].type == TOKEN_PIPE) pipe_count++;
     }
     if (pipe_count == 0) {
-        // No pipes, run as before
-        // Maximum number of arguments (including command name)
-        #define MAX_ARGS 256
         char *args[MAX_ARGS];
         int arg_count = 0;
 
@@ -207,7 +207,6 @@ int execute_command(Token *tokens, int token_count) {
     }
 
     // Handle piped commands
-    #define MAX_CMDS 32
     int cmd_starts[MAX_CMDS], cmd_lens[MAX_CMDS];
     int cmd_count = split_commands(tokens, token_count, cmd_starts, cmd_lens, MAX_CMDS);
 
@@ -269,7 +268,7 @@ int execute_command(Token *tokens, int token_count) {
 
             // Execute command
             execvp(args[0], args);
-            printf("Command not found!\n");
+            fprintf(stderr, "Command not found!\n");
             exit(1);
         }
         pids[i] = pid;

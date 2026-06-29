@@ -6,20 +6,20 @@
 
 int ping_command(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Invalid syntax!\n");
+        fprintf(stderr, "Invalid syntax!\n");
         return -1;
     }
 
     char *endptr;
     long pid_val = strtol(argv[1], &endptr, 10);
     if (*endptr != '\0' || pid_val <= 0) {
-        printf("Invalid syntax!\n");
+        fprintf(stderr, "Invalid syntax!\n");
         return -1;
     }
 
     long sig_val = strtol(argv[2], &endptr, 10);
     if (*endptr != '\0') {
-        printf("Invalid syntax!\n");
+        fprintf(stderr, "Invalid syntax!\n");
         return -1;
     }
 
@@ -27,7 +27,7 @@ int ping_command(int argc, char *argv[]) {
 
     if (kill((pid_t)pid_val, actual_signal) == -1) {
         if (errno == ESRCH) {
-            printf("No such process found\n");
+            fprintf(stderr, "No such process found\n");
         } else {
             perror("kill");
         }

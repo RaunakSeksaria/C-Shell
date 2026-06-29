@@ -31,7 +31,7 @@ int setup_input_redirection(Token *tokens, int token_count) {
     if (input_file) {
         input_fd = open(input_file, O_RDONLY);
         if (input_fd == -1) {
-            printf("No such file or directory\n");
+            fprintf(stderr, "No such file or directory\n");
             free(input_file);
             return -1;
         }
@@ -83,7 +83,7 @@ int setup_output_redirection(Token *tokens, int token_count) {
         
         output_fd = open(output_file, flags, 0644);
         if (output_fd == -1) {
-            printf("Unable to create file for writing\n");
+            fprintf(stderr, "Unable to create file for writing\n");
             free(output_file);
             return -1;
         }

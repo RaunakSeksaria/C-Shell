@@ -17,7 +17,7 @@ static int change_directory(const char *path) {
     }
 
     if (chdir(path) == -1) {
-        printf("No such directory!\n");
+        fprintf(stderr, "No such directory!\n");
         return -1;
     }
 
@@ -28,7 +28,7 @@ static int change_directory(const char *path) {
 
 int hop_command(int argc, char *argv[]) {
     if (shell_home_dir[0] == '\0') {
-        printf("Shell home directory not set!\n");
+        fprintf(stderr, "Shell home directory not set!\n");
         return -1;
     }
 

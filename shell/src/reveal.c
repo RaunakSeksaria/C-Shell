@@ -31,7 +31,7 @@ static int list_directory(const char *path, int show_hidden, int line_by_line) {
 
     dir = opendir(path);
     if (!dir) {
-        printf("No such directory!\n");
+        fprintf(stderr, "No such directory!\n");
         return -1;
     }
 
@@ -64,7 +64,7 @@ int reveal_command(int argc, char *argv[]) {
     char target_path[MAX_PATH];
 
     if (shell_home_dir[0] == '\0') {
-        printf("Shell home directory not set!\n");
+        fprintf(stderr, "Shell home directory not set!\n");
         return -1;
     }
 
@@ -77,7 +77,7 @@ int reveal_command(int argc, char *argv[]) {
     }
 
     if (last_flag_index + 2 < argc) {
-        printf("reveal: Invalid Syntax!\n");
+        fprintf(stderr, "reveal: Invalid Syntax!\n");
         return -1;
     }
 
@@ -104,7 +104,7 @@ int reveal_command(int argc, char *argv[]) {
             strcat(target_path, "/..");
         } else if (strcmp(path_arg, "-") == 0) {
             if (!has_previous) {
-                printf("No such directory!\n");
+                fprintf(stderr, "No such directory!\n");
                 return -1;
             }
             strncpy(target_path, previous_dir, sizeof(target_path));

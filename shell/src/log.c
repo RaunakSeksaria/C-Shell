@@ -100,7 +100,7 @@ void store_command(const char *command) {
 
 int log_command(int argc, char *argv[]) {
     if (argc > 3) {
-        printf("log: Invalid Syntax!\n");
+        fprintf(stderr, "log: Invalid Syntax!\n");
         return -1;
     }
 
@@ -120,7 +120,7 @@ int log_command(int argc, char *argv[]) {
         long index = strtol(argv[2], &endptr, 10);
 
         if (*endptr != '\0' || index < 1 || index > count) {
-            printf("log: Please provide a valid index between 1 and %d\n", count);
+            fprintf(stderr, "log: Please provide a valid index between 1 and %d\n", count);
             for (int i = 0; i < count; i++) free(commands[i]);
             free(commands);
             return -1;
@@ -133,7 +133,7 @@ int log_command(int argc, char *argv[]) {
         Token *tokens = tokenize(cmd_to_execute, &token_count);
 
         if (!tokens) {
-            printf("log: Failed to parse command\n");
+            fprintf(stderr, "log: Failed to parse command\n");
             free(cmd_to_execute);
             return -1;
         }
@@ -148,7 +148,7 @@ int log_command(int argc, char *argv[]) {
         free(tokens);
         return result;
     } else {
-        printf("log: Invalid Syntax!\n");
+        fprintf(stderr, "log: Invalid Syntax!\n");
         if (commands) {
             for (int i = 0; i < count; i++) free(commands[i]);
             free(commands);
