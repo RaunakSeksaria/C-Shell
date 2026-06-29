@@ -177,14 +177,6 @@ int execute_command(Token *tokens, int token_count) {
             else {
                 result = execute_external_command(args, tokens, token_count, is_background);
             }
-
-            // log owns its own history (e.g. `log execute`), so every command
-            // is recorded except log itself, and only when it actually ran.
-            if (strcmp(args[0], "log") != 0 && result != -1) {
-                char *command = reconstruct_command(tokens, token_count);
-                store_command(command);
-                free(command);
-            }
         }
 
         for (int i = 0; i < arg_count; i++) {

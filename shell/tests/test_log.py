@@ -84,3 +84,32 @@ def test_history_persists_across_sessions(tmp_path):
     s2.close()
 
     assert "echo persistent_entry" in history
+
+
+def test_pipeline_logged_as_single_entry(sh):
+    sh.run("echo a | cat")
+    entries = nonempty_lines(sh.run("log"))
+    assert "echo a | cat" in entries
+
+
+def test_sequence_logged_as_single_entry(sh):
+    sh.run("echo a ; echo b")
+    entries = nonempty_lines(sh.run("log"))
+    # The whole shell_cmd is one entry, not split into "echo a" and "echo b".
+    assert "echo a ; echo b" in entries
+    assert "echo a" not in entries
+    assert "echo b" not in entries
+
+
+def test_background_logged_with_ampersand(sh):
+    sh.run("sleep 0.1 &")
+    assert "sleep 0.1 &" in sh.run("log")
+
+
+def test_sequence_containing_log_not_recorded(sh):
+    sh.run("echo keep_me")
+    sh.run("echo skip ; log")
+    entries = nonempty_lines(sh.run("log"))
+    # A line whose any atomic is `log` is excluded wholesale.
+    assert "echo skip ; log" not in entries
+    assert "echo keep_me" in entries

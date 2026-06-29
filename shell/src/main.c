@@ -4,6 +4,7 @@
 #include "background.h"
 #include "signalling.h"
 #include "shell_state.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +49,7 @@ void shell_loop(void) {
         if (!parse_input(tokens, token_count)) {
             fprintf(stderr, "Invalid Syntax!\n");
         } else {
+            log_record(tokens, token_count);
             execute_command(tokens, token_count);
         }
 

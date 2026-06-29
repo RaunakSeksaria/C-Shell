@@ -1,10 +1,12 @@
 #ifndef LOG_H
 #define LOG_H
 
-// Function to handle the log command
+#include "input.h"
+
+// Handle the `log` builtin: display history, `purge`, or `execute <index>`.
 int log_command(int argc, char *argv[]);
 
-// Function to store a command in the log
-void store_command(const char *command);
+// Record one input line in history; called once per line from the shell loop.
+void log_record(Token *tokens, int token_count);
 
 #endif // LOG_H

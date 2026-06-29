@@ -43,13 +43,14 @@ persisted to history
 <user@host:~> activities
 [48217] : sleep - Running
 
-# history persists across sessions (& is recorded without the trailing &)
+# history persists across sessions; each whole line is stored as one entry
 <user@host:~> log
 hop src
 hop -
+echo counting these words | wc -w
 echo persisted to history > note.txt
 cat < note.txt
-sleep 30
+sleep 30 &
 activities
 ```
 

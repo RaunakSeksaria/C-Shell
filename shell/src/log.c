@@ -9,14 +9,11 @@
 #include "command.h"
 #include "shell_state.h"
 #include "util.h"
+#include "token_utils.h"
 
 #define MAX_COMMANDS 15
 #define MAX_COMMAND_LENGTH 1024
 #define LOG_FILE ".shell_history"
-
-// Set only while `log execute` runs a replayed command, so that command (and
-// the `log execute` invocation itself) is not appended back into the history.
-static int g_suppress_log = 0;
 
 static char *get_log_file_path(void) {
     if (shell_home_dir[0] == '\0') return NULL;
@@ -72,10 +69,7 @@ static void write_log_file(char **commands, int count) {
     free(path);
 }
 
-void store_command(const char *command) {
-    if (g_suppress_log) return;
-    if (strncmp(command, "log", 3) == 0) return;
-
+static void store_command(const char *command) {
     int count;
     char **commands = read_log_file(&count);
 
@@ -103,6 +97,37 @@ void store_command(const char *command) {
 
     for (int i = 0; i < count; i++) free(commands[i]);
     free(commands);
+}
+
+// A NAME token is in command-name position if it is the first token or follows
+// a separator/pipe. The whole line is kept out of history when any such command
+// name is "log" — covering `log`, `log purge`, `echo ; log`, etc., but not
+// "logout" (the length check guards against prefixes).
+static int is_log_invocation(Token *tokens, int token_count) {
+    for (int i = 0; i < token_count; i++) {
+        int at_command_start = (i == 0) ||
+            tokens[i-1].type == TOKEN_PIPE ||
+            tokens[i-1].type == TOKEN_SEMICOLON ||
+            tokens[i-1].type == TOKEN_AMPERSAND;
+        if (at_command_start && tokens[i].type == TOKEN_NAME &&
+            tokens[i].len == 3 && strncmp(tokens[i].text, "log", 3) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Records one input line in history. Called once per line from the shell loop
+// with the entire token stream, so the complete shell_cmd — pipes, sequences,
+// redirections, trailing & — is stored as a single entry. log invocations are
+// never recorded.
+void log_record(Token *tokens, int token_count) {
+    if (token_count == 0) return;
+    if (is_log_invocation(tokens, token_count)) return;
+
+    char *command = reconstruct_command(tokens, token_count);
+    store_command(command);
+    free(command);
 }
 
 int log_command(int argc, char *argv[]) {
@@ -149,9 +174,7 @@ int log_command(int argc, char *argv[]) {
             return -1;
         }
 
-        g_suppress_log = 1;
         int result = execute_command(tokens, token_count);
-        g_suppress_log = 0;
 
         for (int i = 0; i < count; i++) free(commands[i]);
         free(commands);
