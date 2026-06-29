@@ -9,6 +9,15 @@ def test_hop_no_args_returns_to_home(sh, tmp_path):
     assert sh.cwd() == str(tmp_path)
 
 
+def test_cd_is_an_alias_for_hop(sh, tmp_path):
+    sub = tmp_path / "subdir"
+    sub.mkdir()
+    sh.run(f"cd {sub}")
+    assert sh.cwd() == str(sub)
+    sh.run("cd ..")
+    assert sh.cwd() == str(tmp_path)
+
+
 def test_hop_tilde(sh, tmp_path):
     sub = tmp_path / "subdir"
     sub.mkdir()

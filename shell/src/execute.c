@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "ping.h"
 #include "util.h"
 
@@ -22,6 +23,7 @@
 pid_t fg_pid = -1;
 char fg_command[1024] = "";
 char fg_full_command[1024] = "";
+volatile sig_atomic_t fg_stop_requested = 0;
 
 static int execute_external_command(char **args, Token *tokens, int token_count, int is_background) {
     pid_t pid = fork();
@@ -84,9 +86,27 @@ static int execute_external_command(char **args, Token *tokens, int token_count,
             fg_full_command[sizeof(fg_full_command)-1] = '\0';
             free(full_cmd);
 
-            int status;
-            waitpid(pid, &status, WUNTRACED);  // WUNTRACED: return on Ctrl-Z stop, not only on exit
+            // WUNTRACED so a Ctrl-Z stop is observed, not only an exit. Retry
+            // across EINTR to reap the child, unless the SIGTSTP handler set
+            // fg_stop_requested — Ctrl-Z then parks the job here, in normal
+            // context, which is what keeps the handler async-signal-safe.
+            fg_stop_requested = 0;
+            int status = 0;
+            while (1) {
+                pid_t w = waitpid(pid, &status, WUNTRACED);
+                if (w == pid) break;
+                if (w == -1 && errno == EINTR) {
+                    if (fg_stop_requested) break;
+                    continue;
+                }
+                break;
+            }
             fg_pid = -1;
+            if (fg_stop_requested || WIFSTOPPED(status)) {
+                fg_stop_requested = 0;
+                park_stopped_job(pid, fg_command, fg_full_command);
+                return 0;
+            }
             return WEXITSTATUS(status);
         }
     }
@@ -153,7 +173,7 @@ int execute_command(Token *tokens, int token_count) {
 
         int result = -1;
         if (arg_count > 0) {
-            if (strcmp(args[0], "hop") == 0) {
+            if (strcmp(args[0], "hop") == 0 || strcmp(args[0], "cd") == 0) {
                 result = hop_command(arg_count, args);
             }
             else if (strcmp(args[0], "reveal") == 0) {
@@ -255,10 +275,35 @@ int execute_command(Token *tokens, int token_count) {
         close(pipes[i][1]);
     }
 
+    if (is_background) {
+        // Track every stage as a background job so check_background_jobs() reaps
+        // them (no zombies) and they appear in activities; the stages share one
+        // job number and the last stage's pid is reported as the pipeline's.
+        char *full_cmd = reconstruct_command(tokens, token_count);
+        int job = next_job_number++;
+        for (int i = 0; i < cmd_count && bg_job_count < MAX_BG_JOBS; i++) {
+            BackgroundJob *bj = &bg_jobs[bg_job_count++];
+            Token *name = &tokens[cmd_starts[i]];
+            size_t name_len = (size_t)name->len;
+            if (name_len > sizeof(bj->command_name) - 1) name_len = sizeof(bj->command_name) - 1;
+            bj->job_number = job;
+            bj->pid = pids[i];
+            memcpy(bj->command_name, name->text, name_len);
+            bj->command_name[name_len] = '\0';
+            strncpy(bj->full_command, full_cmd, sizeof(bj->full_command) - 1);
+            bj->full_command[sizeof(bj->full_command) - 1] = '\0';
+            strcpy(bj->state, "Running");
+        }
+        printf("[%d] %d\n", job, pids[cmd_count - 1]);
+        free(full_cmd);
+        return 0;
+    }
+
     int status = 0;
     for (int i = 0; i < cmd_count; i++) {
-        int s;
-        if (!is_background) waitpid(pids[i], &s, 0);
+        int s = 0;
+        while (waitpid(pids[i], &s, 0) == -1 && errno == EINTR)
+            ;
         // Pipeline status is that of its last stage, matching POSIX shells.
         if (i == cmd_count - 1) status = WEXITSTATUS(s);
     }

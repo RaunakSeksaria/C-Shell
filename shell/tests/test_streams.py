@@ -58,3 +58,12 @@ def test_command_not_found_does_not_pollute_pipe(tmp_path):
     out, err = run_piped("nonexistent_cmd_xyzabc | cat\n", tmp_path)
     assert "Command not found!" not in out
     assert "Command not found!" in err
+
+
+def test_long_command_line_does_not_overflow(tmp_path):
+    # A line longer than the old fixed 4096-byte buffers in reconstruct_command
+    # and expand_env_vars must not overflow. Driven via a pipe (not a PTY) to
+    # avoid the terminal's canonical-mode line-length limit.
+    arg = "a" * 8000
+    out, _ = run_piped("echo " + arg + "\n", tmp_path)
+    assert arg in out

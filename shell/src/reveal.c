@@ -94,7 +94,7 @@ int reveal_command(int argc, char *argv[]) {
         const char *path_arg = argv[last_flag_index + 1];
 
         if (strcmp(path_arg, "~") == 0) {
-            strncpy(target_path, shell_home_dir, sizeof(target_path));
+            snprintf(target_path, sizeof(target_path), "%s", shell_home_dir);
         } else if (strcmp(path_arg, ".") == 0) {
             if (getcwd(target_path, sizeof(target_path)) == NULL) {
                 perror("getcwd");
@@ -105,23 +105,23 @@ int reveal_command(int argc, char *argv[]) {
                 perror("getcwd");
                 return -1;
             }
-            strcat(target_path, "/..");
+            strncat(target_path, "/..", sizeof(target_path) - strlen(target_path) - 1);
         } else if (strcmp(path_arg, "-") == 0) {
             if (!has_previous) {
                 fprintf(stderr, "No such directory!\n");
                 return -1;
             }
-            strncpy(target_path, previous_dir, sizeof(target_path));
+            snprintf(target_path, sizeof(target_path), "%s", previous_dir);
         } else {
             if (path_arg[0] == '~' && (path_arg[1] == '/' || path_arg[1] == '\0')) {
                 if (path_arg[1] == '\0') {
-                    strncpy(target_path, shell_home_dir, sizeof(target_path));
+                    snprintf(target_path, sizeof(target_path), "%s", shell_home_dir);
                 } else {
                     snprintf(target_path, sizeof(target_path), "%s%s", shell_home_dir, path_arg + 1);
                 }
                 target_path[sizeof(target_path) - 1] = '\0';
             } else {
-                strncpy(target_path, path_arg, sizeof(target_path));
+                snprintf(target_path, sizeof(target_path), "%s", path_arg);
             }
         }
     }

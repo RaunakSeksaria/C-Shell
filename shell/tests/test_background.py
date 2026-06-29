@@ -13,6 +13,14 @@ def test_background_prints_job_number_and_pid(sh):
     assert re.search(r"\[\d+\] \d+", out)
 
 
+def test_backgrounded_pipeline_launches_and_shell_survives(sh):
+    # A backgrounded pipeline must print a job line and leave the shell usable
+    # (previously this path read an uninitialized status).
+    out = sh.run("sleep 0.3 | cat &")
+    assert re.search(r"\[\d+\] \d+", out)
+    assert sh.run("echo alive") == "alive"
+
+
 def test_background_returns_prompt_without_waiting(sh):
     start = time.monotonic()
     sh.run("sleep 10 &")

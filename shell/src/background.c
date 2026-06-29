@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <errno.h>
 
 BackgroundJob bg_jobs[MAX_BG_JOBS];
 int bg_job_count = 0;
@@ -96,6 +97,24 @@ int activities_command(void) {
     return 0;
 }
 
+// Parks a just-stopped foreground job in the background table as "Stopped" so it
+// appears in activities and can be resumed with fg/bg. Called from the waitpid
+// sites in normal context — which is what lets the SIGTSTP handler stay
+// async-signal-safe (it only forwards the signal).
+void park_stopped_job(pid_t pid, const char *name, const char *full_command) {
+    if (bg_job_count >= MAX_BG_JOBS) return;
+
+    BackgroundJob *job = &bg_jobs[bg_job_count++];
+    job->job_number = next_job_number++;
+    job->pid = pid;
+    strncpy(job->command_name, name, sizeof(job->command_name) - 1);
+    job->command_name[sizeof(job->command_name) - 1] = '\0';
+    strncpy(job->full_command, full_command, sizeof(job->full_command) - 1);
+    job->full_command[sizeof(job->full_command) - 1] = '\0';
+    strcpy(job->state, "Stopped");
+    printf("[%d] Stopped %s\n", job->job_number, name);
+}
+
 int fg_builtin(int argc, char *argv[]) {
     check_background_jobs();
 
@@ -139,6 +158,8 @@ int fg_builtin(int argc, char *argv[]) {
     fg_pid = bg_jobs[target_job].pid;
     strncpy(fg_command, bg_jobs[target_job].command_name, sizeof(fg_command)-1);
     fg_command[sizeof(fg_command)-1] = '\0';
+    strncpy(fg_full_command, bg_jobs[target_job].full_command, sizeof(fg_full_command)-1);
+    fg_full_command[sizeof(fg_full_command)-1] = '\0';
 
     if (strcmp(bg_jobs[target_job].state, "Stopped") == 0) {
         kill(-bg_jobs[target_job].pid, SIGCONT);
@@ -147,9 +168,23 @@ int fg_builtin(int argc, char *argv[]) {
     for (int i = target_job; i < bg_job_count - 1; i++) bg_jobs[i] = bg_jobs[i + 1];
     bg_job_count--;
 
-    int status;
-    waitpid(fg_pid, &status, WUNTRACED);
+    fg_stop_requested = 0;
+    int status = 0;
+    pid_t resumed = fg_pid;
+    while (1) {
+        pid_t w = waitpid(fg_pid, &status, WUNTRACED);
+        if (w == fg_pid) break;
+        if (w == -1 && errno == EINTR) {
+            if (fg_stop_requested) break;
+            continue;
+        }
+        break;
+    }
     fg_pid = -1;
+    if (fg_stop_requested || WIFSTOPPED(status)) {
+        fg_stop_requested = 0;
+        park_stopped_job(resumed, fg_command, fg_full_command);
+    }
 
     return 0;
 }

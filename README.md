@@ -118,5 +118,8 @@ Known gaps, kept honest:
 
 - No quoting or escaping yet (`echo "a b"` keeps the quotes); no command substitution (`$(...)`).
 - No short-circuit operators (`&&`, `||`).
-- The `SIGTSTP` handler uses `printf`, which isn't strictly async-signal-safe — fine in practice here, slated for a rewrite around a self-pipe.
+- Job control is approximate: foreground children aren't isolated into their own
+  process groups (`setpgid`/`tcsetpgrp`), so `Ctrl-Z`/`fg`/`bg` rely on terminal
+  group delivery rather than the shell driving each job's group directly. Proper
+  per-job process groups are the next step here.
 - Planned: arrow-key history navigation and line editing (raw-mode `termios`).

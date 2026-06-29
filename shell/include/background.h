@@ -25,3 +25,6 @@ void check_background_jobs(void);
 int activities_command(void);
 int fg_builtin(int argc, char *argv[]);
 int bg_builtin(int argc, char *argv[]);
+
+// Park a just-stopped foreground job (Ctrl-Z) in the background table.
+void park_stopped_job(pid_t pid, const char *name, const char *full_command);

@@ -7,44 +7,60 @@
 // Rebuilds a command string from its tokens, joined by single spaces. Since
 // tokens are whitespace-stripped, this yields a normalized form of the input
 // (collapsed spacing) — that normalized text is what history stores and what
-// background-job listings display, not the raw keystrokes.
+// background-job listings display, not the raw keystrokes. The buffer is sized
+// to the exact length first, so an arbitrarily long line can never overflow it.
 char* reconstruct_command(Token *tokens, int token_count) {
-    char *command = xmalloc(4096);
-    int pos = 0;
+    size_t total = 1;  // trailing NUL
+    for (int i = 0; i < token_count; i++) {
+        total += tokens[i].len + (i > 0 ? 1 : 0);  // token plus its separating space
+    }
 
+    char *command = xmalloc(total);
+    size_t pos = 0;
     for (int i = 0; i < token_count; i++) {
         if (i > 0) command[pos++] = ' ';
-        strncpy(command + pos, tokens[i].text, tokens[i].len);
+        memcpy(command + pos, tokens[i].text, tokens[i].len);
         pos += tokens[i].len;
     }
     command[pos] = '\0';
     return command;
 }
 
+// Appends len bytes to a heap buffer, doubling its capacity as needed and always
+// leaving room for a trailing NUL. Returns the (possibly relocated) buffer.
+static char *append(char *buf, size_t *cap, size_t *pos, const char *src, size_t len) {
+    if (*pos + len + 1 > *cap) {
+        while (*pos + len + 1 > *cap) *cap *= 2;
+        buf = xrealloc(buf, *cap);
+    }
+    memcpy(buf + *pos, src, len);
+    *pos += len;
+    return buf;
+}
+
 // Expands $VAR references against the process environment; an unset variable
-// expands to the empty string.
+// expands to the empty string. The result grows on demand, so neither a long
+// argument nor a large variable value can overflow it.
 char* expand_env_vars(const char* arg) {
-    char* result = xmalloc(4096);
-    int pos = 0;
+    size_t cap = 64, pos = 0;
+    char *result = xmalloc(cap);
 
-    for (int i = 0; arg[i] != '\0'; i++) {
+    for (size_t i = 0; arg[i] != '\0'; i++) {
         if (arg[i] == '$' && arg[i + 1] != '\0') {
+            char name[256];
+            size_t n = 0;
             i++;
-            char var_name[256] = {0};
-            int var_pos = 0;
-
-            while (arg[i] != '\0' && (isalnum(arg[i]) || arg[i] == '_')) {
-                var_name[var_pos++] = arg[i++];
+            while (arg[i] != '\0' && (isalnum((unsigned char)arg[i]) || arg[i] == '_')) {
+                if (n < sizeof(name) - 1) name[n++] = arg[i];
+                i++;
             }
             i--;
+            name[n] = '\0';
 
-            char* value = getenv(var_name);
-            if (value) {
-                strcpy(result + pos, value);
-                pos += strlen(value);
-            }
+            const char *value = getenv(name);
+            if (value) result = append(result, &cap, &pos, value, strlen(value));
         } else {
-            result[pos++] = arg[i];
+            result = append(result, &cap, &pos, &arg[i], 1);
         }
     }
 
