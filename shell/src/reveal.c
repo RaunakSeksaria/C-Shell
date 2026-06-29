@@ -1,5 +1,6 @@
 #include "reveal.h"
 #include "shell_state.h"
+#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,7 @@ static int list_directory(const char *path, int show_hidden, int line_by_line) {
 
     while ((entry = readdir(dir)) != NULL && file_count < MAX_FILES) {
         if (!show_hidden && entry->d_name[0] == '.') continue;
-        files[file_count] = strdup(entry->d_name);
+        files[file_count] = xstrdup(entry->d_name);
         file_count++;
     }
     closedir(dir);

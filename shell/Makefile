@@ -58,7 +58,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 # 3. PHONY TARGETS (Utility Commands)
 # ==============================================================================
 # A phony target is one that is not a file.
-.PHONY: all clean re
+.PHONY: all clean re analyze check
 
 # 'clean' rule: remove all generated files.
 clean:
@@ -68,3 +68,17 @@ clean:
 
 # 're' rule: rebuild the entire project from scratch.
 re: clean all
+
+# 'analyze' rule: run GCC's static analyzer over every source file. CFLAGS
+# already carries -Werror, so any finding fails the build — this is the gate
+# CI runs to keep the tree analyzer-clean. Kept separate from 'all' because
+# -fanalyzer is too slow to pay for on every incremental build.
+analyze:
+	@echo "Running static analysis (gcc -fanalyzer)..."
+	@set -e; for src in $(SRCS); do \
+		$(CC) $(CFLAGS) -fanalyzer -I$(INCDIR) -c $$src -o /dev/null; \
+	done
+	@echo "Static analysis clean."
+
+# 'check' rule: the full pre-merge gate — build cleanly, then analyze.
+check: all analyze

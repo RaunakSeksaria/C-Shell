@@ -13,6 +13,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include "ping.h"
+#include "util.h"
 
 #define MAX_SEQS 64   // max ';'-separated commands in one line
 #define MAX_CMDS 32   // max '|'-separated stages in one pipeline
@@ -139,7 +140,7 @@ int execute_command(Token *tokens, int token_count) {
                     continue;
                 }
 
-                char* temp = malloc(tokens[i].len + 1);
+                char* temp = xmalloc(tokens[i].len + 1);
                 strncpy(temp, tokens[i].text, tokens[i].len);
                 temp[tokens[i].len] = '\0';
 
@@ -238,7 +239,7 @@ int execute_command(Token *tokens, int token_count) {
                                   tokens[cmd_starts[i] + k - 1].type == TOKEN_APPEND_REDIR)) {
                         continue;
                     }
-                    char* temp = malloc(t->len + 1);
+                    char* temp = xmalloc(t->len + 1);
                     strncpy(temp, t->text, t->len);
                     temp[t->len] = '\0';
                     args[arg_count] = expand_env_vars(temp);

@@ -8,6 +8,7 @@
 #include "input.h"
 #include "command.h"
 #include "shell_state.h"
+#include "util.h"
 
 #define MAX_COMMANDS 15
 #define MAX_COMMAND_LENGTH 1024
@@ -21,35 +22,35 @@ static char *get_log_file_path(void) {
     if (shell_home_dir[0] == '\0') return NULL;
 
     size_t len = strlen(shell_home_dir) + strlen(LOG_FILE) + 2;
-    char *path = malloc(len);
+    char *path = xmalloc(len);
     snprintf(path, len, "%s/%s", shell_home_dir, LOG_FILE);
     return path;
 }
 
+// Always returns an owned array of *count entries (0 when there is no history
+// file yet), never NULL. Treating "no history" as a valid empty array lets
+// callers index and free unconditionally instead of relying on a fragile
+// "NULL means empty" convention.
 static char **read_log_file(int *count) {
+    *count = 0;
+    char **commands = xmalloc(MAX_COMMANDS * sizeof(char*));
+
     char *path = get_log_file_path();
-    if (!path) return NULL;
+    if (!path) return commands;
 
     FILE *fp = fopen(path, "r");
-    if (!fp) {
-        free(path);
-        *count = 0;
-        return NULL;
-    }
+    free(path);
+    if (!fp) return commands;
 
-    char **commands = malloc(MAX_COMMANDS * sizeof(char*));
     char line[MAX_COMMAND_LENGTH];
-    *count = 0;
-
     while (fgets(line, sizeof(line), fp) && *count < MAX_COMMANDS) {
         size_t len = strlen(line);
         if (len > 0 && line[len-1] == '\n') line[len-1] = '\0';
-        commands[*count] = strdup(line);
+        commands[*count] = xstrdup(line);
         (*count)++;
     }
 
     fclose(fp);
-    free(path);
     return commands;
 }
 
@@ -94,8 +95,8 @@ void store_command(const char *command) {
         count--;
     }
 
-    commands = realloc(commands, (count + 1) * sizeof(char*));
-    commands[count] = strdup(command);
+    commands = xrealloc(commands, (count + 1) * sizeof(char*));
+    commands[count] = xstrdup(command);
     count++;
 
     write_log_file(commands, count);
@@ -135,13 +136,15 @@ int log_command(int argc, char *argv[]) {
         // Index 1 is the most recent command; the file stores oldest-first, so
         // invert into an array position.
         index = count - index;
-        char *cmd_to_execute = strdup(commands[index]);
+        char *cmd_to_execute = xstrdup(commands[index]);
 
         int token_count;
         Token *tokens = tokenize(cmd_to_execute, &token_count);
 
         if (!tokens) {
             fprintf(stderr, "log: Failed to parse command\n");
+            for (int i = 0; i < count; i++) free(commands[i]);
+            free(commands);
             free(cmd_to_execute);
             return -1;
         }
@@ -157,17 +160,13 @@ int log_command(int argc, char *argv[]) {
         return result;
     } else {
         fprintf(stderr, "log: Invalid Syntax!\n");
-        if (commands) {
-            for (int i = 0; i < count; i++) free(commands[i]);
-            free(commands);
-        }
+        for (int i = 0; i < count; i++) free(commands[i]);
+        free(commands);
         return -1;
     }
 
-    if (commands) {
-        for (int i = 0; i < count; i++) free(commands[i]);
-        free(commands);
-    }
+    for (int i = 0; i < count; i++) free(commands[i]);
+    free(commands);
 
     return 0;
 }

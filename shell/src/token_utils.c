@@ -1,4 +1,5 @@
 #include "token_utils.h"
+#include "util.h"
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -8,7 +9,7 @@
 // (collapsed spacing) — that normalized text is what history stores and what
 // background-job listings display, not the raw keystrokes.
 char* reconstruct_command(Token *tokens, int token_count) {
-    char *command = malloc(4096);
+    char *command = xmalloc(4096);
     int pos = 0;
 
     for (int i = 0; i < token_count; i++) {
@@ -23,7 +24,7 @@ char* reconstruct_command(Token *tokens, int token_count) {
 // Expands $VAR references against the process environment; an unset variable
 // expands to the empty string.
 char* expand_env_vars(const char* arg) {
-    char* result = malloc(4096);
+    char* result = xmalloc(4096);
     int pos = 0;
 
     for (int i = 0; arg[i] != '\0'; i++) {

@@ -1,4 +1,5 @@
 #include "redirection.h"
+#include "util.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@ int setup_input_redirection(Token *tokens, int token_count) {
 
     for (int i = 0; i < token_count; i++) {
         if (tokens[i].type == TOKEN_INPUT_REDIR && i + 1 < token_count) {
-            char *filename = malloc(tokens[i + 1].len + 1);
+            char *filename = xmalloc(tokens[i + 1].len + 1);
             strncpy(filename, tokens[i + 1].text, tokens[i + 1].len);
             filename[tokens[i + 1].len] = '\0';
 
@@ -31,12 +32,18 @@ int setup_input_redirection(Token *tokens, int token_count) {
             return -1;
         }
 
+        // dup2 hands the opened file off as the child's stdin; that descriptor
+        // is meant to live on through the upcoming execvp, so -fanalyzer's
+        // "leak" report on it is a false positive we silence locally.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wanalyzer-fd-leak"
         if (dup2(input_fd, STDIN_FILENO) == -1) {
             perror("dup2");
             close(input_fd);
             free(input_file);
             return -1;
         }
+#pragma GCC diagnostic pop
 
         close(input_fd);
         free(input_file);
@@ -52,7 +59,7 @@ int setup_output_redirection(Token *tokens, int token_count) {
     for (int i = 0; i < token_count; i++) {
         if ((tokens[i].type == TOKEN_OUTPUT_REDIR ||
              tokens[i].type == TOKEN_APPEND_REDIR) && i + 1 < token_count) {
-            char *filename = malloc(tokens[i + 1].len + 1);
+            char *filename = xmalloc(tokens[i + 1].len + 1);
             strncpy(filename, tokens[i + 1].text, tokens[i + 1].len);
             filename[tokens[i + 1].len] = '\0';
 
@@ -72,12 +79,18 @@ int setup_output_redirection(Token *tokens, int token_count) {
             return -1;
         }
 
+        // See the note in setup_input_redirection: the dup2'd stdout descriptor
+        // intentionally survives into the execvp'd child, so -fanalyzer's leak
+        // report is a false positive.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wanalyzer-fd-leak"
         if (dup2(output_fd, STDOUT_FILENO) == -1) {
             perror("dup2");
             close(output_fd);
             free(output_file);
             return -1;
         }
+#pragma GCC diagnostic pop
 
         close(output_fd);
         free(output_file);

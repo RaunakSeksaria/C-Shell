@@ -1,4 +1,5 @@
 #include "input.h"
+#include "util.h"
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -18,7 +19,7 @@ static int is_shell_whitespace(char c) {
 // treat operands uniformly whether or not a space separates them.
 Token* tokenize(const char *input, int *token_count) {
     int capacity = 16;
-    Token *tokens = malloc(sizeof(Token) * capacity);
+    Token *tokens = xmalloc(sizeof(Token) * capacity);
     int count = 0;
     const char *p = input;
 
@@ -30,7 +31,7 @@ Token* tokenize(const char *input, int *token_count) {
 
         if (count >= capacity - 1) {
             capacity *= 2;
-            tokens = realloc(tokens, sizeof(Token) * capacity);
+            tokens = xrealloc(tokens, sizeof(Token) * capacity);
         }
 
         Token token;
@@ -55,7 +56,7 @@ Token* tokenize(const char *input, int *token_count) {
             if (*p != '\0' && !is_shell_whitespace(*p) && !strchr("|&;<>", *p)) {
                 if (count >= capacity - 1) {
                     capacity *= 2;
-                    tokens = realloc(tokens, sizeof(Token) * capacity);
+                    tokens = xrealloc(tokens, sizeof(Token) * capacity);
                 }
                 tokens[count++] = token;
                 token.text = (char*)p;
@@ -73,7 +74,7 @@ Token* tokenize(const char *input, int *token_count) {
                 if (*p != '\0' && !is_shell_whitespace(*p) && !strchr("|&;<>", *p)) {
                     if (count >= capacity - 1) {
                         capacity *= 2;
-                        tokens = realloc(tokens, sizeof(Token) * capacity);
+                        tokens = xrealloc(tokens, sizeof(Token) * capacity);
                     }
                     tokens[count++] = token;
                     token.text = (char*)p;
@@ -90,7 +91,7 @@ Token* tokenize(const char *input, int *token_count) {
                 if (*p != '\0' && !is_shell_whitespace(*p) && !strchr("|&;<>", *p)) {
                     if (count >= capacity - 1) {
                         capacity *= 2;
-                        tokens = realloc(tokens, sizeof(Token) * capacity);
+                        tokens = xrealloc(tokens, sizeof(Token) * capacity);
                     }
                     tokens[count++] = token;
                     token.text = (char*)p;
