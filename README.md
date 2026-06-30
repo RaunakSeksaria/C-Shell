@@ -1,6 +1,6 @@
-# shell
+# C-shell
 
-A POSIX shell written from scratch in C — interactive prompt, pipes, I/O redirection, job control, and history that persists across sessions.
+A POSIX shell written from scratch in C - interactive prompt, pipes, I/O redirection, job control, and history that persists across sessions.
 
 It follows a clean **tokenize → parse → execute** pipeline: a hand-written lexer, a recursive-descent grammar validator, and an executor that forks/`exec`s external commands, wires up pipelines with `dup2`, and forwards terminal signals to the foreground job. Built under strict POSIX flags with zero warnings, covered by 84 integration tests, and gated by static analysis on every change.
 
@@ -12,7 +12,7 @@ It follows a clean **tokenize → parse → execute** pipeline: a hand-written l
 
   To record one:
     asciinema rec demo.cast        # run the sequence below, then Ctrl-D to stop
-    agg demo.cast docs/demo.gif    # convert to GIF — https://github.com/asciinema/agg
+    agg demo.cast docs/demo.gif    # convert to GIF - https://github.com/asciinema/agg
   Suggested sequence:
     reveal -l | head -3
     echo counting these words | wc -w
@@ -58,13 +58,13 @@ activities
 
 ## Features
 
-- **Interactive prompt** — `<user@host:cwd>`, with the launch directory shown as `~` (and paths beneath it as `~/sub`).
-- **External commands** — arbitrary programs via `fork` + `execvp`, with argument `$VAR` expansion.
-- **Pipelines** — `a | b | c`, one child per stage, stdio wired with `pipe`/`dup2`.
-- **I/O redirection** — `<`, `>`, `>>`, combinable with pipes; last redirection of a kind wins.
-- **Sequencing & background** — `;` runs commands in order; `&` runs without blocking the prompt.
-- **Job control** — `Ctrl-C`/`Ctrl-Z`/`Ctrl-D`, `fg`, `bg`, and `activities` to list running/stopped jobs.
-- **Built-ins** — `hop` (cd, with `~`/`-`/`..`), `reveal` (ls, with `-a`/`-l`), `log` (persistent history with `purge` and `execute <n>`), `ping` (send a signal to a pid).
+- **Interactive prompt** - `<user@host:cwd>`, with the launch directory shown as `~` (and paths beneath it as `~/sub`).
+- **External commands** - arbitrary programs via `fork` + `execvp`, with argument `$VAR` expansion.
+- **Pipelines** - `a | b | c`, one child per stage, stdio wired with `pipe`/`dup2`.
+- **I/O redirection** - `<`, `>`, `>>`, combinable with pipes; last redirection of a kind wins.
+- **Sequencing & background** - `;` runs commands in order; `&` runs without blocking the prompt.
+- **Job control** - `Ctrl-C`/`Ctrl-Z`/`Ctrl-D`, `fg`, `bg`, and `activities` to list running/stopped jobs.
+- **Built-ins** - `hop` (cd, with `~`/`-`/`..`), `reveal` (ls, with `-a`/`-l`), `log` (persistent history with `purge` and `execute <n>`), `ping` (send a signal to a pid).
 
 ## Quick start
 
@@ -76,7 +76,7 @@ make all      # build → shell.out
 ./shell.out   # start the shell
 ```
 
-Sources compile with `-std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror` — only the C POSIX library is used.
+Sources compile with `-std=c99 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror` - only the C POSIX library is used.
 
 ## Quality & tooling
 

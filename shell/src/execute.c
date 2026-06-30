@@ -6,6 +6,7 @@
 #include "hop.h"
 #include "reveal.h"
 #include "log.h"
+#include "help.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -193,6 +194,9 @@ int execute_command(Token *tokens, int token_count) {
             }
             else if (strcmp(args[0], "bg") == 0) {
                 result = bg_builtin(arg_count, args);
+            }
+            else if (strcmp(args[0], "help") == 0) {
+                result = help_command();
             }
             else {
                 result = execute_external_command(args, tokens, token_count, is_background);
